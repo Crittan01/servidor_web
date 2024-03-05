@@ -1,0 +1,10 @@
+---
+- name: Despliegue y Gestion de un Servidow Web
+  hosts: web_server
+  become: true
+  roles:
+    - security
+    - users
+    - firewall
+    - nginx
+    - common

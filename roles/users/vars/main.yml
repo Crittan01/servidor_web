@@ -1,0 +1,21 @@
+---
+# vars file for roles/users
+users_system_groups:
+  - webadmin
+  - webdeploy
+
+users_usuarios_web:
+  - nombre: adminweb
+    comentario: "Administrador del servidor web"
+    shell: "/bin/bash"
+    grupos:
+      - "wheel"
+      - "webadmin"
+    password_hash: "{{ 'password123' | password_hash('sha512') }}"
+
+  - nombre: deployer
+    comentario: "Usuario de despliegue"
+    shell: /bin/bash
+    grupos:
+      - "webdeploy"
+    password_hash: "{{ 'deployerpassword' | password_hash('sha512') }}"
