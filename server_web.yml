@@ -1,0 +1,122 @@
+---
+- name: Despliegue y Gestion de un Servidow Web
+  hosts: web_server
+  become: true
+  vars_files:
+    - /home/ansible/practicas/laboratorios/server_web/vars/main.yml
+
+  tasks:
+    - name: SECURITY
+      block:
+        - name: Actualizar todos los paquetes a su última versión estable
+          ansible.builtin.dnf:
+            name: "*"
+            state: latest
+            update_cache: true
+
+        - name: Instalar repo epel-release
+          ansible.builtin.dnf:
+            name:
+              - epel-release
+            state: present
+          when: ansible_distribution == 'Rocky'
+
+        - name: Instalar herramientas de seguridad básicas
+          ansible.builtin.yum:
+            name:
+              - fail2ban
+              - firewalld
+            state: present
+
+        # Asegurar que fail2ban esté habilitado y corriendo
+        - name: Asegurar que fail2ban esté habilitado y en funcionamiento
+          ansible.builtin.service:
+            name: fail2ban
+            state: started
+            enabled: true
+
+        # Configurar firewalld
+        - name: Asegurar que firewalld esté habilitado y en funcionamiento
+          block:
+            - name: Habilitar e Inicializar Firewall
+              ansible.builtin.service:
+                name: firewalld
+                state: started
+                enabled: true
+
+            - name: Abrir puertos HTTP y HTTPS en firewalld
+              ansible.posix.firewalld:
+                port: "{{ item }}"
+                permanent: true
+                state: enabled
+                immediate: true
+              loop:
+                - 80/tcp
+                - 443/tcp
+
+    - name: USERS
+      block:
+        - name: Crear grupos necesarios para usuarios web
+          ansible.builtin.group:
+            name: "{{ item }}"
+            state: present
+          loop: "{{ users_system_groups }}"
+
+        - name: Crear usuarios para la gestión del servidor web
+          ansible.builtin.user:
+            name: "{{ item.nombre }}"
+            comment: "{{ item.comentario }}"
+            shell: "{{ item.shell }}"
+            groups: "{{ item.grupos | join(',') }}"
+            password: "{{ item.password_hash }}"
+            state: present
+          loop: "{{ users_usuarios_web }}"
+
+    - name: FIREWALL
+      block:
+        - name: Validar estado Servicio de Firewall
+          ansible.builtin.dnf:
+            name:
+              - firewalld
+            state: present
+
+        - name: Asegurar que el servicio este habilitado y en funcionamiento
+          ansible.builtin.service:
+            name: firewalld
+            state: started
+            enabled: true
+
+        - name: Permitir trafico HTTPS Por el FW
+          ansible.posix.firewalld:
+            service: https
+            permanent: true
+            state: enabled
+            immediate: true
+
+    - name: NGINX
+      block:
+        - name: Asegurar que Nginx esté instalado
+          ansible.builtin.dnf:
+            name: nginx
+            state: present
+
+        - name: Configurar archivo de Nginx
+          ansible.builtin.template:
+            src: /home/ansible/practicas/laboratorios/server_web/templates/nginx.conf.j2
+            dest: /etc/nginx/nginx.conf
+            owner: nginx
+            group: nginx
+            mode: "0644"
+          notify: reiniciar nginx
+
+        - name: Asegurar que Nginx esté habilitado y corriendo
+          ansible.builtin.service:
+            name: nginx
+            state: started
+            enabled: true
+
+    - name: reiniciar nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+        enabled: true
