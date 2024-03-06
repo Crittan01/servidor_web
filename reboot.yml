@@ -1,6 +1,7 @@
 ---
 - name: REINICIAR EL SERVIDOR
   hosts: web_server
+  become: true
   tasks:
     - name: Reiniciar Servidor
       ansible.builtin.reboot:
