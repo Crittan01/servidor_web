@@ -1,6 +1,7 @@
 ---
 - name: Despliegue y Gestion de un Servidow Web
   become: true
+  hosts: web_server
   roles:
     - security
     - users
