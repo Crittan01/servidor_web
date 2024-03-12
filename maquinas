@@ -1,3 +1,2 @@
 [web_server]
-fedora39 # ansible_python_interpreter=/usr/bin/python3.6
 rockyserv9
